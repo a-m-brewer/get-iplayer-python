@@ -1,0 +1,39 @@
+import re
+
+import tldextract as tldextract
+
+
+url_regex = re.compile(
+    r'^(?:http|ftp)s?://'  # http:// or https://
+    # domain...
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
+    r'localhost|'  # localhost...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+    r'(?::\d+)?'  # optional port
+    r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
+pid_regex = re.compile(
+    r"/programmes/[a-z0-9]{8}"
+)
+
+
+def is_bbc_url(url: str):
+    return __is_url(url) and __has_pid(url) and __is_bbc_domain(url)
+
+
+def __is_url(url: str):
+    result = re.match(url_regex, url) is not None
+    return result
+
+
+def __has_pid(url: str):
+    result = re.search(pid_regex, url)
+    return bool(result)
+
+
+def __is_bbc_domain(url: str):
+    return __get_domain(url) == "bbc"
+
+
+def __get_domain(url: str):
+    return tldextract.extract(url).domain
