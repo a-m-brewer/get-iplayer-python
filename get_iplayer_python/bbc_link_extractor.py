@@ -1,24 +1,22 @@
 import requests
 from bs4 import BeautifulSoup, SoupStrainer
 
-from get_iplayer_python.url_validator import is_bbc_url
+from get_iplayer_python.url_validator import is_bbc_url, is_programmes_url
 
 
-def urllib_website_retriever(website):
+def requests_website_retriever(website):
     return requests.get(website).text
 
 
-def extract_bbc_links(url: str, html_retriever_function=urllib_website_retriever):
+def extract_bbc_links(url: str, html_retriever_function=requests_website_retriever):
     html = html_retriever_function(url)
-    result = []
-    for item in BeautifulSoup(html, "html.parser", parse_only=SoupStrainer('a')):
-        if item.has_attr('href') and is_bbc_url(item["href"]):
-            result.append(item["href"])
-    return result
 
-# TODO: can get programme info from $url	https://www.bbc.co.uk/programmes/m0005zsn.json
-# Maybe this url https://open.live.bbc.co.uk/mediaselector/5/select/version/2.0/mediaset/iptv-all/vpid/m0005zsl?cb=50625
-# https://open.live.bbc.co.uk/mediaselector/5/select/version/2.0/mediaset/iptv-all/vpid/m0005zsl?cb=".( sprintf "%05.0f", 99999*rand(0) );
-# media elements
-# connection elements
-#
+    soup = BeautifulSoup(html, "html.parser")
+
+    results = [episode for episode in soup.findAll("div") if "data-pid" in episode.attrs]
+
+    links = []
+    for result in results:
+        links.extend([a.attrs["href"] for a in result.find_all('a', href=True) if is_programmes_url(a.attrs["href"])])
+
+    return links

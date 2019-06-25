@@ -7,7 +7,7 @@ setup(
     author_email='adam@adambrewer.co.uk',
     url="https://github.com/a-m-brewer/get-iplayer-python",
     packages=find_packages(),
-    install_requires=['tldextract', 'requests', 'beautifulsoup4'],
+    install_requires=['tldextract', 'requests', 'beautifulsoup4', 'lxml'],
     entry_points={
         'console_scripts': [
             'get-iplayer-python = get_iplayer_python.__main__:main'

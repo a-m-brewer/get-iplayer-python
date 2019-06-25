@@ -16,9 +16,21 @@ pid_regex = re.compile(
     r"/programmes/[a-z0-9]{8}"
 )
 
+programmes_regex = re.compile(
+    r".*programmes.*"
+)
+
 
 def is_bbc_url(url: str):
     return __is_url(url) and __has_pid(url) and __is_bbc_domain(url)
+
+
+def is_programmes_url(url: str):
+    return is_bbc_url(url) and __has_programme(url)
+
+
+def __has_programme(url: str):
+    return re.match(programmes_regex, url) is not None
 
 
 def __is_url(url: str):
