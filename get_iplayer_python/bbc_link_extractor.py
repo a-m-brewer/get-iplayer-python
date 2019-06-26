@@ -1,7 +1,7 @@
 import requests
-from bs4 import BeautifulSoup, SoupStrainer
+from bs4 import BeautifulSoup
 
-from get_iplayer_python.url_validator import is_bbc_url, is_programmes_url
+from get_iplayer_python.url_validator import is_programmes_url
 
 
 def requests_website_retriever(website):
@@ -20,3 +20,4 @@ def extract_bbc_links(url: str, html_retriever_function=requests_website_retriev
         links.extend([a.attrs["href"] for a in result.find_all('a', href=True) if is_programmes_url(a.attrs["href"])])
 
     return links
+

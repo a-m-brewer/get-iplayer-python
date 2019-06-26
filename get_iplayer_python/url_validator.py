@@ -1,7 +1,9 @@
 import re
+from json import JSONDecodeError
 
 import tldextract as tldextract
 
+from get_iplayer_python.bbc_metadata_generator import get_show_metadata
 
 url_regex = re.compile(
     r'^(?:http|ftp)s?://'  # http:// or https://
@@ -19,6 +21,30 @@ pid_regex = re.compile(
 programmes_regex = re.compile(
     r".*programmes.*"
 )
+
+
+def is_episode_page(url: str):
+    try:
+        meta = get_show_metadata(url)
+    except JSONDecodeError:
+        return False
+    return meta["display_title"]["subtitle"] != ""
+
+
+def is_programme_page(url):
+    try:
+        meta = get_show_metadata(url)
+    except JSONDecodeError:
+        return False
+    return meta["display_title"]["subtitle"] == ""
+
+
+def is_playlist_page(url: str):
+    try:
+        get_show_metadata(url)
+    except JSONDecodeError:
+        return True
+    return False
 
 
 def is_bbc_url(url: str):
