@@ -20,7 +20,7 @@ def get_stream_selection_links(dash_xml_page_string):
         connections = media.findAll("connection")
         media_hrefs = [
             {"href": con.attrs["href"], "priority": con.attrs["priority"], "bitrate": media.attrs["bitrate"]}
-            for con in connections if con.attrs["transferformat"] == "dash"
+            for con in connections if "transferformat" in con.attrs and con.attrs["transferformat"] == "dash"
         ]
         dash_links_details.extend(media_hrefs)
 
@@ -40,6 +40,7 @@ def create_templates(url: str, xml_getter_function=xml_getter_func):
         for a_set in adaptation_sets:
             information = get_adaption_info(a_set)
             representations = get_programme_representation(a_set)
+            mime_type = a_set.attrs["mimetype"]
             for rep in representations:
 
                 base_url = ''
@@ -74,7 +75,8 @@ def create_templates(url: str, xml_getter_function=xml_getter_func):
                     "base_url": full_dash_url,
                     "init_url": init_template,
                     "fragments": fragments,
-                    "bandwidth": bandwidth
+                    "bandwidth": bandwidth,
+                    "mimetype": mime_type
                 })
     return download_items
 

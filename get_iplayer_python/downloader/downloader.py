@@ -7,12 +7,12 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 
-def download(filename, extention, template, overwrite=False):
+def download(path, filename, extension, template, overwrite=False):
     logger = logging.getLogger(__name__)
     total_frag = len(template["fragments"]) + 1
     fragments_downloaded = 0
-    temporary_filename = f"{filename}.part"
-    output_filename = f"{filename}.{extention}"
+    temporary_filename = f"{path}{filename}.part"
+    output_filename = f"{path}{filename}.{extension}"
 
     path_filename = Path(output_filename)
     if path_filename.is_file() and not overwrite:

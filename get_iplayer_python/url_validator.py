@@ -4,6 +4,7 @@ from json import JSONDecodeError
 import tldextract as tldextract
 
 from get_iplayer_python.bbc_metadata_generator import get_show_metadata
+from get_iplayer_python.is_bbc_re import IS_BBC_URL_RE
 
 url_regex = re.compile(
     r'^(?:http|ftp)s?://'  # http:// or https://
@@ -13,6 +14,7 @@ url_regex = re.compile(
     r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
     r'(?::\d+)?'  # optional port
     r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
 
 pid_regex = re.compile(
     r"/programmes/[a-z0-9]{8}"
@@ -48,7 +50,7 @@ def is_playlist_page(url: str):
 
 
 def is_bbc_url(url: str):
-    return __is_url(url) and __has_pid(url) and __is_bbc_domain(url)
+    return re.match(IS_BBC_URL_RE, url) is not None
 
 
 def is_programmes_url(url: str):
