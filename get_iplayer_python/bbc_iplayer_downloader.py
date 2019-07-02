@@ -11,7 +11,7 @@ from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, cr
 from get_iplayer_python.url_validator import is_episode_page, is_bbc_url
 
 
-def download_from_url(url, location):
+def download_from_url(url, location, overwrite=False):
     def download_show(show_url, show_location):
         # helpers
         def two_keys(a, b):
@@ -54,7 +54,8 @@ def download_from_url(url, location):
             download(data_template["location"],
                      data_template["download_filename"],
                      data_template["extension"],
-                     data_template["template"])
+                     data_template["template"],
+                     overwrite=overwrite)
             logger.info("downloaded %s" % data_template["download_filename"])
 
         def get_file_name(file):
@@ -94,10 +95,11 @@ def download_from_url(url, location):
             return
 
         media_type_keys = list(formats.keys())
+
         formats[media_type_keys[0]]["location"] = show_location
         final_file_name = get_output_filename(formats[media_type_keys[0]], playlist_info["title"])
         path_filename = Path(final_file_name)
-        if path_filename.is_file():
+        if path_filename.is_file() and not overwrite:
             logging.warning(f"{final_file_name} already exists skipping...")
             return
 
@@ -126,6 +128,9 @@ def download_from_url(url, location):
     if not is_bbc_url(url):
         logging.error(f"not a bbc url: {url}")
         return
+
+    if not location.endswith("/"):
+        location += "/"
 
     logger = logging.getLogger(__name__)
 
