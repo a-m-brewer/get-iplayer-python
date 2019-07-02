@@ -8,10 +8,10 @@ from get_iplayer_python.bbc_metadata_generator import get_show_playlist_data, ge
 from get_iplayer_python.downloader.downloader import download
 from get_iplayer_python.ffmpeg_wrapper import merge_audio_and_video
 from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, create_templates
-from get_iplayer_python.url_validator import is_episode_page, is_bbc_url
+from get_iplayer_python.url_validator import is_episode_page, is_bbc_url, is_playlist_page, is_programme_page
 
 
-def download_from_url(url, location, overwrite=False):
+def download_from_url(url, location, overwrite=False, audio_only=False):
     def download_show(show_url, show_location):
         # helpers
         def two_keys(a, b):
@@ -120,9 +120,14 @@ def download_from_url(url, location, overwrite=False):
         cleanup(formats)
 
     def prepare_links(links_url: str):
+        if links_url.endswith("/"):
+            links_url = links_url[:-1]
         is_episode = is_episode_page(links_url)
+        is_programme = is_programme_page(links_url)
         if is_episode:
             return is_episode, [links_url]
+        if is_programme:
+            links_url += "/episodes/player"
         return is_episode, extract_bbc_links(links_url)
 
     if not is_bbc_url(url):
