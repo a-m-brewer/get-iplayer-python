@@ -38,7 +38,7 @@ def is_programme_page(url):
         meta = get_show_metadata(url)
     except JSONDecodeError:
         return False
-    return meta["display_title"]["subtitle"] == ""
+    return meta["display_title"]["subtitle"] == "" and not url.endswith("/episodes/player")
 
 
 def is_playlist_page(url: str):

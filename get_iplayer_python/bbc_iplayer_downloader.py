@@ -12,7 +12,7 @@ from get_iplayer_python.url_validator import is_episode_page, is_bbc_url, is_pla
 
 
 def download_from_url(url, location, overwrite=False, audio_only=False):
-    def download_show(show_url, show_location):
+    def download_show(show_url, show_location, playlist_info):
         # helpers
         def two_keys(a, b):
             def _k(item):
@@ -75,10 +75,8 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
         def cleanup(downloaded_formats):
             for _, value in downloaded_formats.items():
                 downloaded_path = get_file_name(value)
-                os.remove(downloaded_path)
-
-        # information
-        playlist_info = get_show_playlist_data(show_url)
+                if Path(downloaded_path).exists():
+                    os.remove(downloaded_path)
 
         # stream setup
         stream_selection_xml = get_stream_selection_xml(playlist_info["vpid"])
@@ -89,6 +87,9 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
         top_mpeg_dash = sorted(stream_selection_links, key=two_keys("priority", "bitrate"), reverse=True)[0]
         # get highest bandwidth download template
         formats = get_best_templates_for_mimetypes(top_mpeg_dash["href"])
+
+        if audio_only:
+            formats = {"audio": formats["audio"]}
 
         if not any(formats):
             logger.error("not available formats to download")
@@ -139,15 +140,24 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
 
     logger = logging.getLogger(__name__)
 
+    logger.debug(f"retrieving links for {url}")
+
     episode_url, links = prepare_links(url)
 
     programme_metadata = get_show_metadata(url)
 
     title = programme_metadata["title"]
 
+    logger.debug("found episodes...")
+
+    links_playlist_info = {}
+    for link in links:
+        links_playlist_info[link] = get_show_playlist_data(link)
+        logger.debug(links_playlist_info[link]["title"])
+
     logging.info(f"downloading {'episode' if episode_url else 'playlist'}")
 
     logger.info(f"staring download of  {title} to {location}")
     for link in links:
-        download_show(link, location)
+        download_show(link, location, links_playlist_info[link])
     logger.info(f"download of playlist {title} to {location} complete")

@@ -7,7 +7,7 @@ import logging
 def args():
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
-    parser.add_argument("-a" "--audio-only", help="only download audio from stream", action="store_true", default=False)
+    parser.add_argument("-a","--audio-only", help="only download audio from stream", action="store_true", default=False)
     parser.add_argument("-l", "--download-location", help="download location of items", type=str, default="./")
     parser.add_argument("-o", "--overwrite",
                         help="overwrite existing downloads in download folder", action="store_true", default=False)
