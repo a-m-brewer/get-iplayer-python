@@ -6,7 +6,7 @@ from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
 from get_iplayer_python.bbc_link_extractor import extract_bbc_links, prepare_links
 from get_iplayer_python.bbc_metadata_generator import get_show_playlist_data, get_show_metadata
 from get_iplayer_python.downloader.downloader import download
-from get_iplayer_python.ffmpeg_wrapper import merge_audio_and_video
+from get_iplayer_python.ffmpeg_wrapper import merge_audio_and_video, save_audio
 from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, create_templates
 from get_iplayer_python.url_validator import is_episode_page, is_bbc_url, is_playlist_page, is_programme_page
 
@@ -62,15 +62,21 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
             return "%s%s.%s" % (
                 file["location"], file["download_filename"], file["extension"])
 
-        def get_output_filename(file, output_title):
+        def get_output_filename(file, output_title, extension=None):
+            ext = extension if extension is not None else file["extension"]
             return "%s%s.%s" % (
-                file["location"], output_title, file["extension"])
+                file["location"], output_title, ext)
 
         def merge_video_and_audio_files(audio_file, video_file, output_title):
             audio_file_location = get_file_name(audio_file)
             video_file_location = get_file_name(video_file)
             output_title_location = get_output_filename(video_file, output_title)
             merge_audio_and_video(audio_file_location, video_file_location, output_title_location)
+
+        def save_audio_files(audio_file, output_title):
+            audio_file_location = get_file_name(audio_file)
+            output_title_location = get_output_filename(audio_file, output_title, "m4a")
+            save_audio(audio_file_location, output_title_location)
 
         def cleanup(downloaded_formats):
             for _, value in downloaded_formats.items():
@@ -112,11 +118,8 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
         if "audio" in media_type_keys and "video" in media_type_keys:
             merge_video_and_audio_files(formats["audio"], formats["video"], playlist_info["title"])
 
-        if len(media_type_keys) == 1:
-            downloaded_f = formats[media_type_keys[0]]
-            downloaded_format_name = get_file_name(downloaded_f)
-            output_f = get_output_filename(downloaded_f, playlist_info["title"])
-            os.rename(downloaded_format_name, output_f)
+        if len(media_type_keys) == 1 and "audio" in media_type_keys:
+            save_audio_files(formats["audio"], playlist_info["title"])
 
         cleanup(formats)
 
