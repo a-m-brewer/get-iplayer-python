@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
-from get_iplayer_python.bbc_link_extractor import extract_bbc_links
+from get_iplayer_python.bbc_link_extractor import extract_bbc_links, prepare_links
 from get_iplayer_python.bbc_metadata_generator import get_show_playlist_data, get_show_metadata
 from get_iplayer_python.downloader.downloader import download
 from get_iplayer_python.ffmpeg_wrapper import merge_audio_and_video
@@ -44,7 +44,7 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
                 best_formats[media_type] = {
                     "template": best_format,
                     "media_type": media_type,
-                    "extension": best_format["mimetype"].split("/")[1]
+                    "extension": "m4a" if media_type == "audio" else best_format["mimetype"].split("/")[1]
                 }
 
             return best_formats
@@ -119,17 +119,6 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
             os.rename(downloaded_format_name, output_f)
 
         cleanup(formats)
-
-    def prepare_links(links_url: str):
-        if links_url.endswith("/"):
-            links_url = links_url[:-1]
-        is_episode = is_episode_page(links_url)
-        is_programme = is_programme_page(links_url)
-        if is_episode:
-            return is_episode, [links_url]
-        if is_programme:
-            links_url += "/episodes/player"
-        return is_episode, extract_bbc_links(links_url)
 
     if not is_bbc_url(url):
         logging.error(f"not a bbc url: {url}")
