@@ -1,5 +1,7 @@
 import re
 
+from dateutil.parser import parse
+
 import requests
 
 from get_iplayer_python.is_bbc_re import IS_BBC_URL_RE
@@ -34,5 +36,6 @@ def get_show_metadata(url: str, json_getter=requests_get_metadata_json):
         "title": full_json["title"],
         "display_title": full_json["display_title"],
         "pid": full_json["pid"],
-        "image_pid": full_json["image"]["pid"]
+        "image_pid": full_json["image"]["pid"],
+        "first_broadcast_date": parse(full_json["first_broadcast_date"])
     }

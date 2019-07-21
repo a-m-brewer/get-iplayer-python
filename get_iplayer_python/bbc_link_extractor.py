@@ -1,6 +1,10 @@
+from datetime import datetime
+
+import pytz
 import requests
 from bs4 import BeautifulSoup
 
+from get_iplayer_python.bbc_metadata_generator import get_show_metadata
 from get_iplayer_python.url_validator import is_programmes_url, is_episode_page, is_programme_page
 
 
@@ -25,13 +29,20 @@ def extract_bbc_links(url: str, html_retriever_function=requests_website_retriev
     return links
 
 
-def prepare_links(links_url: str):
+def prepare_links(links_url: str, after_date: datetime = datetime.min):
+    after_date = pytz.utc.localize(after_date)
     if links_url.endswith("/"):
         links_url = links_url[:-1]
     is_episode = is_episode_page(links_url)
     is_programme = is_programme_page(links_url)
     if is_episode:
-        return is_episode, [links_url]
+        meta = get_show_metadata(links_url)
+        show_link = [] if meta["first_broadcast_date"] < after_date else [links_url]
+        return is_episode, show_link
     if is_programme:
         links_url += "/episodes/player"
-    return is_episode, extract_bbc_links(links_url)
+    after_links = [
+        link for link in extract_bbc_links(links_url)
+        if after_date <= get_show_metadata(link)["first_broadcast_date"]
+    ]
+    return is_episode, after_links
