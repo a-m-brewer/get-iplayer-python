@@ -6,6 +6,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
+from get_iplayer_python.util import slugify
+
 
 def download(path, filename, extension, template, overwrite=False):
     logger = logging.getLogger(__name__)
@@ -58,5 +60,4 @@ def download(path, filename, extension, template, overwrite=False):
         for frag in template["fragments"]:
             get_and_write_chunk("%s%s" % (template["base_url"], frag["path"]))
             fragments_downloaded += 1
-
     os.rename(temporary_filename, output_filename)

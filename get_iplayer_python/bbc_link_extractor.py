@@ -46,3 +46,8 @@ def prepare_links(links_url: str, after_date: datetime = datetime.min):
         if after_date <= get_show_metadata(link)["first_broadcast_date"]
     ]
     return is_episode, after_links
+
+
+if __name__ == '__main__':
+    result = prepare_links("https://www.bbc.co.uk/programmes/b01dmw90/episodes/player", datetime(2019, 7, 15))
+    print(result)
