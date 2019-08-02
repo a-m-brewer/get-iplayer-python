@@ -1,6 +1,7 @@
 import logging
 import os
 from pathlib import Path
+import string
 
 from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
 from get_iplayer_python.bbc_link_extractor import extract_bbc_links, prepare_links
@@ -63,6 +64,8 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
                 file["location"], file["download_filename"], file["extension"])
 
         def get_output_filename(file, output_title, extension=None):
+            valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+            output_title = ''.join(c if c in valid_chars else '_' for c in output_title)
             ext = extension if extension is not None else file["extension"]
             return "%s%s.%s" % (
                 file["location"], output_title, ext)

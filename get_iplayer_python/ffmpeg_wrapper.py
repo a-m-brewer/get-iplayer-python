@@ -23,6 +23,10 @@ def save_audio(audio_file_location, output_file_name):
         subprocess.call(
             ["ffmpeg",
              "-i", audio_file_location,
+             "-vn",
+             "-ar", "48000",
+             "-ac", "2",
+             "-b:a", "320k",
              output_file_name])
     except OSError as e:
         logger.exception(e.strerror)
