@@ -76,12 +76,12 @@ def download_from_url(url, location, overwrite=False, audio_only=False, after_da
         def merge_video_and_audio_files(audio_file, video_file, pid, output_title):
             audio_file_location = get_file_name(audio_file)
             video_file_location = get_file_name(video_file)
-            output_title_location = get_output_filename(video_file, pid, output_title)
+            output_title_location = get_output_filename(video_file, output_title, pid)
             merge_audio_and_video(audio_file_location, video_file_location, output_title_location)
 
         def save_audio_files(audio_file, pid, output_title):
             audio_file_location = get_file_name(audio_file)
-            output_title_location = get_output_filename(audio_file, pid, output_title, "m4a")
+            output_title_location = get_output_filename(audio_file, output_title, pid, "m4a")
             save_audio(audio_file_location, output_title_location)
 
         def cleanup(downloaded_formats):
@@ -112,8 +112,8 @@ def download_from_url(url, location, overwrite=False, audio_only=False, after_da
         formats[media_type_keys[0]]["location"] = show_location
         final_file_name = get_output_filename(
             formats[media_type_keys[0]],
-            playlist_info["vpid"],
-            playlist_info["title"]
+            playlist_info["title"],
+            playlist_info["vpid"]
         )
         path_filename = Path(final_file_name)
         if path_filename.is_file() and not overwrite:
