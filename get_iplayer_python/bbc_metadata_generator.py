@@ -25,7 +25,8 @@ def get_show_playlist_data(url: str, json_getter=requests_get_metadata_json):
         "image_url": image_url,
         "pid": full_json["defaultAvailableVersion"]["pid"],
         "title": full_json["defaultAvailableVersion"]["smpConfig"]["title"],
-        "vpid": full_json["defaultAvailableVersion"]["smpConfig"]["items"][0]["vpid"]
+        "vpid": full_json["defaultAvailableVersion"]["smpConfig"]["items"][0]["vpid"],
+        "duration": full_json["defaultAvailableVersion"]["smpConfig"]["items"][0]["duration"]
     }
 
 

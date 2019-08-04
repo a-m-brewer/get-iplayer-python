@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 import requests
 from bs4 import BeautifulSoup
 
-from get_iplayer_python.bbc_metadata_generator import get_show_metadata
+from get_iplayer_python.bbc_metadata_generator import get_show_metadata, get_show_playlist_data
 from get_iplayer_python.url_validator import is_programmes_url, is_episode_page, is_programme_page
 
 
@@ -36,18 +36,39 @@ def prepare_links(links_url: str, after_date: datetime = datetime.min):
     is_episode = is_episode_page(links_url)
     is_programme = is_programme_page(links_url)
     if is_episode:
-        meta = get_show_metadata(links_url)
-        show_link = [] if meta["first_broadcast_date"] < after_date else [links_url]
+        meta = __get_meta_dict(links_url)
+        show_link = [] if __after_date(meta, after_date) else [links_url]
         return is_episode, show_link
     if is_programme:
         links_url += "/episodes/player"
-    after_links = [
-        link for link in extract_bbc_links(links_url)
-        if after_date <= get_show_metadata(link)["first_broadcast_date"]
+
+    all_metadata = [
+        __get_meta_dict(link)
+        for link in extract_bbc_links(links_url)
     ]
+
+    after_meta = [
+        meta
+        for meta in all_metadata
+        if __after_date(meta, after_date)
+    ]
+
+    after_links = [
+        meta["link"]
+        for meta in after_meta
+    ]
+
     return is_episode, after_links
 
 
-if __name__ == '__main__':
-    result = prepare_links("https://www.bbc.co.uk/programmes/b01dmw90/episodes/player", datetime(2019, 7, 15))
-    print(result)
+def __after_date(meta, after_date):
+    return after_date - timedelta(seconds=meta["playlist"]["duration"]) <= meta["show"]["first_broadcast_date"]
+
+
+def __get_meta_dict(link):
+    return {
+        "show": get_show_metadata(link),
+        "playlist": get_show_playlist_data(link),
+        "link": link
+    }
+
