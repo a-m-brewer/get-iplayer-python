@@ -10,8 +10,8 @@ def args():
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
     parser.add_argument("-a", "--audio-only", help="only download audio from stream", action="store_true", default=False)
-    parser.add_argument("-d", "--after-date", help="download items only after date",
-                        type=lambda s: datetime.strptime(s, '%Y-%m-%d'),
+    parser.add_argument("-d", "--after-date", help="download items only after date format '%Y-%m-%d %H:%M:%S'",
+                        type=lambda s: datetime.strptime(s, '%Y-%m-%d %H:%M:%S'),
                         default=datetime.min)
     parser.add_argument("-l", "--download-location", help="download location of items", type=str, default="./")
     parser.add_argument("-o", "--overwrite",
