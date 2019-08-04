@@ -1,5 +1,7 @@
 import argparse
 
+from datetime import datetime
+
 from get_iplayer_python.bbc_iplayer_downloader import download_from_url
 import logging
 
@@ -8,6 +10,9 @@ def args():
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
     parser.add_argument("-a", "--audio-only", help="only download audio from stream", action="store_true", default=False)
+    parser.add_argument("-d", "--after-date", help="download items only after date",
+                        type=lambda s: datetime.strptime(s, '%Y-%m-%d'),
+                        default=datetime.min)
     parser.add_argument("-l", "--download-location", help="download location of items", type=str, default="./")
     parser.add_argument("-o", "--overwrite",
                         help="overwrite existing downloads in download folder", action="store_true", default=False)
@@ -21,7 +26,8 @@ def main():
     download_from_url(program_args.url,
                       program_args.download_location,
                       overwrite=program_args.overwrite,
-                      audio_only=program_args.audio_only)
+                      audio_only=program_args.audio_only,
+                      after_date=program_args.after_date)
 
 
 if __name__ == '__main__':

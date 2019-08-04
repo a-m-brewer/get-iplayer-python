@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 import string
 
+from datetime import datetime
+
 from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
 from get_iplayer_python.bbc_link_extractor import extract_bbc_links, prepare_links
 from get_iplayer_python.bbc_metadata_generator import get_show_playlist_data, get_show_metadata
@@ -12,7 +14,7 @@ from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, cr
 from get_iplayer_python.url_validator import is_episode_page, is_bbc_url, is_playlist_page, is_programme_page
 
 
-def download_from_url(url, location, overwrite=False, audio_only=False):
+def download_from_url(url, location, overwrite=False, audio_only=False, after_date=datetime.min):
     def download_show(show_url, show_location, playlist_info):
         # helpers
         def two_keys(a, b):
@@ -137,7 +139,7 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
 
     logger.debug(f"retrieving links for {url}")
 
-    episode_url, links = prepare_links(url)
+    episode_url, links = prepare_links(url, after_date)
 
     programme_metadata = get_show_metadata(url)
 
