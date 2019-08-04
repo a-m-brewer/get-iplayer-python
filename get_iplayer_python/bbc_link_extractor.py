@@ -37,7 +37,7 @@ def prepare_links(links_url: str, after_date: datetime = datetime.min):
     is_programme = is_programme_page(links_url)
     if is_episode:
         meta = __get_meta_dict(links_url)
-        show_link = [] if __after_date(meta, after_date) else [links_url]
+        show_link = [links_url] if __after_date(meta, after_date) else []
         return is_episode, show_link
     if is_programme:
         links_url += "/episodes/player"
@@ -71,4 +71,3 @@ def __get_meta_dict(link):
         "playlist": get_show_playlist_data(link),
         "link": link
     }
-
