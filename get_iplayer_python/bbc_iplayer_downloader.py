@@ -12,8 +12,12 @@ from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, cr
 from get_iplayer_python.url_validator import is_episode_page, is_bbc_url, is_playlist_page, is_programme_page
 
 
-def download_from_url(url, location, overwrite=False, audio_only=False):
-    def download_show(show_url, show_location, playlist_info):
+def download_from_url(url, location, overwrite=False, audio_only=False, download_hooks=None):
+    def update_download_hook(hooks, info_dict: dict):
+        for hook in hooks:
+            hook(info_dict)
+
+    def download_show(show_location, playlist_info):
         # helpers
         def two_keys(a, b):
             def _k(item):
@@ -126,6 +130,8 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
 
         cleanup(formats)
 
+        return get_output_filename(formats[media_type_keys[0]], playlist_info["title"])
+
     if not is_bbc_url(url):
         logging.error(f"not a bbc url: {url}")
         return
@@ -134,6 +140,13 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
         location += "/"
 
     logger = logging.getLogger(__name__)
+
+    if download_hooks is None:
+        download_hooks = []
+
+    update_download_hook(download_hooks, {
+        "status": "downloading"
+    })
 
     logger.debug(f"retrieving links for {url}")
 
@@ -154,5 +167,12 @@ def download_from_url(url, location, overwrite=False, audio_only=False):
 
     logger.info(f"staring download of  {title} to {location}")
     for link in links:
-        download_show(link, location, links_playlist_info[link])
+        update_download_hook(download_hooks, {
+            "status": "downloading"
+        })
+        file_name = download_show(location, links_playlist_info[link])
+        update_download_hook(download_hooks, {
+            "status": "downloaded",
+            "filename": file_name
+        })
     logger.info(f"download of playlist {title} to {location} complete")
