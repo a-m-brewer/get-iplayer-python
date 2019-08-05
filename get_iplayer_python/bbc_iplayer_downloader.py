@@ -187,7 +187,7 @@ def download_from_url(url, location, overwrite=False, audio_only=False, download
         })
         file_name = download_show(location, links_playlist_info[link])
         update_download_hook(download_hooks, {
-            "status": "downloaded",
+            "status": "finished",
             "filename": file_name
         })
     logger.info(f"download of playlist {title} to {location} complete")
