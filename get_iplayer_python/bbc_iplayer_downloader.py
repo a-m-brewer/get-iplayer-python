@@ -1,18 +1,19 @@
 import logging
 import os
-from pathlib import Path
 import string
+from datetime import datetime
+from pathlib import Path
 
 from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
-from get_iplayer_python.bbc_link_extractor import extract_bbc_links, prepare_links
+from get_iplayer_python.bbc_link_extractor import prepare_links
 from get_iplayer_python.bbc_metadata_generator import get_show_playlist_data, get_show_metadata
 from get_iplayer_python.downloader.downloader import download
 from get_iplayer_python.ffmpeg_wrapper import merge_audio_and_video, save_audio
 from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, create_templates
-from get_iplayer_python.url_validator import is_episode_page, is_bbc_url, is_playlist_page, is_programme_page
+from get_iplayer_python.url_validator import is_bbc_url
 
 
-def download_from_url(url, location, overwrite=False, audio_only=False, download_hooks=None):
+def download_from_url(url, location, overwrite=False, audio_only=False, download_hooks=None, after_date=datetime.min):
     def update_download_hook(hooks, info_dict: dict):
         for hook in hooks:
             hook(info_dict)
@@ -35,12 +36,12 @@ def download_from_url(url, location, overwrite=False, audio_only=False, download
             templates = create_templates(href)
 
             all_formats = []
-            for template in templates:
-                if not any([f for f in all_formats if f["mimetype"] == template["mimetype"]]):
-                    all_formats.append({"mimetype": template["mimetype"], "templates": []})
+            for format_template in templates:
+                if not any([f for f in all_formats if f["mimetype"] == format_template["mimetype"]]):
+                    all_formats.append({"mimetype": format_template["mimetype"], "templates": []})
                 for mime_types in all_formats:
-                    if mime_types["mimetype"] == template["mimetype"]:
-                        mime_types["templates"].append(template)
+                    if mime_types["mimetype"] == format_template["mimetype"]:
+                        mime_types["templates"].append(format_template)
 
             best_formats = {}
             for sort_format in all_formats:
@@ -67,22 +68,23 @@ def download_from_url(url, location, overwrite=False, audio_only=False, download
             return "%s%s.%s" % (
                 file["location"], file["download_filename"], file["extension"])
 
-        def get_output_filename(file, output_title, extension=None):
-            valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        def get_output_filename(file, output_title, pid, extension=None):
+            valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
             output_title = ''.join(c if c in valid_chars else '_' for c in output_title)
+            output_title = f"{output_title}-{pid}"
             ext = extension if extension is not None else file["extension"]
             return "%s%s.%s" % (
                 file["location"], output_title, ext)
 
-        def merge_video_and_audio_files(audio_file, video_file, output_title):
+        def merge_video_and_audio_files(audio_file, video_file, pid, output_title):
             audio_file_location = get_file_name(audio_file)
             video_file_location = get_file_name(video_file)
-            output_title_location = get_output_filename(video_file, output_title)
+            output_title_location = get_output_filename(video_file, output_title, pid)
             merge_audio_and_video(audio_file_location, video_file_location, output_title_location)
 
-        def save_audio_files(audio_file, output_title):
+        def save_audio_files(audio_file, pid, output_title):
             audio_file_location = get_file_name(audio_file)
-            output_title_location = get_output_filename(audio_file, output_title, "m4a")
+            output_title_location = get_output_filename(audio_file, output_title, pid, "m4a")
             save_audio(audio_file_location, output_title_location)
 
         def cleanup(downloaded_formats):
@@ -111,7 +113,11 @@ def download_from_url(url, location, overwrite=False, audio_only=False, download
         media_type_keys = list(formats.keys())
 
         formats[media_type_keys[0]]["location"] = show_location
-        final_file_name = get_output_filename(formats[media_type_keys[0]], playlist_info["title"])
+        final_file_name = get_output_filename(
+            formats[media_type_keys[0]],
+            playlist_info["title"],
+            playlist_info["vpid"]
+        )
         path_filename = Path(final_file_name)
         if path_filename.is_file() and not overwrite:
             logging.warning(f"{final_file_name} already exists skipping...")
@@ -123,14 +129,23 @@ def download_from_url(url, location, overwrite=False, audio_only=False, download
             download_template(template)
 
         if "audio" in media_type_keys and "video" in media_type_keys:
-            merge_video_and_audio_files(formats["audio"], formats["video"], playlist_info["title"])
+            merge_video_and_audio_files(
+                formats["audio"],
+                formats["video"],
+                playlist_info["vpid"],
+                playlist_info["title"]
+            )
 
         if len(media_type_keys) == 1 and "audio" in media_type_keys:
-            save_audio_files(formats["audio"], playlist_info["title"])
+            save_audio_files(
+                formats["audio"],
+                playlist_info["vpid"],
+                playlist_info["title"]
+            )
 
         cleanup(formats)
 
-        return get_output_filename(formats[media_type_keys[0]], playlist_info["title"])
+        return get_output_filename(formats[media_type_keys[0]], playlist_info["title"], playlist_info["vpid"])
 
     if not is_bbc_url(url):
         logging.error(f"not a bbc url: {url}")
@@ -150,7 +165,7 @@ def download_from_url(url, location, overwrite=False, audio_only=False, download
 
     logger.debug(f"retrieving links for {url}")
 
-    episode_url, links = prepare_links(url)
+    episode_url, links = prepare_links(url, after_date)
 
     programme_metadata = get_show_metadata(url)
 
