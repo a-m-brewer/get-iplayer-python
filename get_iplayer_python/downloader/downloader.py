@@ -6,8 +6,6 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from get_iplayer_python.util import slugify
-
 
 def download(path, filename, extension, template, overwrite=False):
     logger = logging.getLogger(__name__)

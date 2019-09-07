@@ -40,3 +40,4 @@ def get_show_metadata(url: str, json_getter=requests_get_metadata_json):
         "image_pid": full_json["image"]["pid"],
         "first_broadcast_date": parse(full_json["first_broadcast_date"])
     }
+

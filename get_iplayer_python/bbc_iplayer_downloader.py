@@ -13,7 +13,13 @@ from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, cr
 from get_iplayer_python.url_validator import is_bbc_url
 
 
-def download_from_url(url, location, overwrite=False, audio_only=False, download_hooks=None, after_date=datetime.min):
+def download_from_url(url,
+                      location,
+                      overwrite=False,
+                      audio_only=False,
+                      download_hooks=None,
+                      after_date=datetime(1970, 1, 1),
+                      output_format=None):
     def update_download_hook(hooks, info_dict: dict):
         for hook in hooks:
             hook(info_dict)
