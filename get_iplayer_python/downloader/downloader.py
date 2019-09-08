@@ -1,61 +1,43 @@
 import logging
-import os
 from pathlib import Path
 
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
 
 
-def download(path, filename, extension, template, overwrite=False):
-    logger = logging.getLogger(__name__)
-    total_frag = len(template["fragments"]) + 1
-    fragments_downloaded = 0
-    temporary_filename = f"{path}{filename}.part"
-    output_filename = f"{path}{filename}.{extension}"
+def dash_downloader(filename_with_path,
+                    base_dash_path,
+                    initialisation_template_url,
+                    download_segments,
+                    overwrite,
+                    logger=logging.getLogger(__name__)):
+    # +1 because init segment
+    total_segments = len(download_segments) + 1
+    downloaded_segments = 0
 
-    path_filename = Path(output_filename)
-    if path_filename.is_file() and not overwrite:
-        logging.warning(f"{output_filename} already exists skipping...")
+    if Path(filename_with_path).is_file() and not overwrite:
+        logging.warning(f"{filename_with_path} already exists skipping...")
         return
 
-    def requests_retry_session(
-            retries=3,
-            backoff_factor=0.3,
-            status_forcelist=(500, 502, 504),
-            session=None) -> requests.adapters.HTTPAdapter:
-        session = session or requests.Session()
-        retry = Retry(
-            total=retries,
-            read=retries,
-            connect=retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=status_forcelist,
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
+    logger.debug(f"downloading file to {filename_with_path}")
 
-    def get_message():
-        return f"download of file: {filename} is {round((fragments_downloaded / total_frag) * 100, 2)}% complete"
+    with open(filename_with_path, "wb") as file:
 
-    with open(temporary_filename, "wb") as file:
-        def get_and_write_chunk(chunk_address):
-            try:
-                response = requests_retry_session().get(chunk_address, stream=True)
-                file.write(response.content)
-            except requests.HTTPError:
-                logger.exception(f"failed to download initialization chunk for {filename} url: {chunk_address}")
-            except OSError:
-                logger.exception(f"could not download initialization chunk for {filename}")
-            finally:
-                logging.debug(get_message())
+        def get_message():
+            return f"download {round((downloaded_segments / total_segments) * 100, 2)}% complete"
 
-        get_and_write_chunk("%s%s" % (template["base_url"], template["init_url"]))
-        fragments_downloaded += 1
+        def get_and_write_chunk(filename):
+            full_url = f"{base_dash_path}{filename}"
+            res = requests.get(full_url)
+            file.write(res.content)
 
-        for frag in template["fragments"]:
-            get_and_write_chunk("%s%s" % (template["base_url"], frag["path"]))
-            fragments_downloaded += 1
-    os.rename(temporary_filename, output_filename)
+        # download init chunk
+        get_and_write_chunk(initialisation_template_url)
+        downloaded_segments += 1
+        logger.debug(get_message())
+
+        for chunk in download_segments:
+            get_and_write_chunk(chunk["path"])
+            downloaded_segments += 1
+            logger.debug(get_message())
+
+    logging.info(f"download complete {filename_with_path}")
