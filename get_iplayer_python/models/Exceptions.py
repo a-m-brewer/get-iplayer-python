@@ -8,3 +8,7 @@ class UserInputException(BbcException):
 
 class ArgumentException(BbcException):
     pass
+
+
+class MissingDataException(BbcException):
+    pass

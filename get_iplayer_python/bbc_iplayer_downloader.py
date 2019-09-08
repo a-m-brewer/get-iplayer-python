@@ -5,12 +5,11 @@ from datetime import datetime
 from pathlib import Path
 
 from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
-from get_iplayer_python.bbc_link_extractor import prepare_links
-from get_iplayer_python.bbc_metadata_generator import get_show_playlist_data, get_show_metadata
 from get_iplayer_python.downloader.downloader import download
 from get_iplayer_python.ffmpeg_wrapper import merge_audio_and_video, save_audio
+from get_iplayer_python.models.Exceptions import BbcException
 from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, create_templates
-from get_iplayer_python.url_validator import is_bbc_url
+from get_iplayer_python.extractors.download_data_extractor import download_data_extractor
 
 
 def download_from_url(url,
@@ -19,7 +18,8 @@ def download_from_url(url,
                       audio_only=False,
                       download_hooks=None,
                       after_date=datetime(1970, 1, 1),
-                      output_format=None):
+                      output_format=None,
+                      logger=logging.getLogger(__name__)):
     def update_download_hook(hooks, info_dict: dict):
         for hook in hooks:
             hook(info_dict)
@@ -153,40 +153,16 @@ def download_from_url(url,
 
         return get_output_filename(formats[media_type_keys[0]], playlist_info["title"], playlist_info["vpid"])
 
-    if not is_bbc_url(url):
-        logging.error(f"not a bbc url: {url}")
+    download_hooks = [] if download_hooks is None else download_hooks
+
+    try:
+        download_data = download_data_extractor(url, location, audio_only, download_hooks, after_date)
+    except BbcException as e:
+        logger.exception(e)
         return
 
-    if not location.endswith("/"):
-        location += "/"
+    
 
-    logger = logging.getLogger(__name__)
-
-    if download_hooks is None:
-        download_hooks = []
-
-    update_download_hook(download_hooks, {
-        "status": "downloading"
-    })
-
-    logger.debug(f"retrieving links for {url}")
-
-    episode_url, links = prepare_links(url, after_date)
-
-    programme_metadata = get_show_metadata(url)
-
-    title = programme_metadata["title"]
-
-    logger.debug("found episodes...")
-
-    links_playlist_info = {}
-    for link in links:
-        links_playlist_info[link] = get_show_playlist_data(link)
-        logger.debug(links_playlist_info[link]["title"])
-
-    logging.info(f"downloading {'episode' if episode_url else 'playlist'}")
-
-    logger.info(f"staring download of  {title} to {location}")
     for link in links:
         update_download_hook(download_hooks, {
             "status": "downloading"
@@ -197,3 +173,7 @@ def download_from_url(url,
             "filename": file_name
         })
     logger.info(f"download of playlist {title} to {location} complete")
+
+
+if __name__ == '__main__':
+    download_from_url("https://www.bbc.co.uk/programmes/b01dmw90/episodes/player", "./")

@@ -19,7 +19,7 @@ def download_data_extractor(url, location, audio, download_hooks, after_date):
     :param audio: download as audio
     :param download_hooks: list of action<obj>
     :param after_date: minimum first broadcast date of episodes
-    :return:
+    :return: dict
     """
 
     output_data = {}
