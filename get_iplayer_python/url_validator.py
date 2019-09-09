@@ -25,20 +25,19 @@ programmes_regex = re.compile(
 )
 
 
-def is_episode_page(url: str):
-    try:
-        meta = get_show_metadata(url)
-    except JSONDecodeError:
-        return False
-    return meta["display_title"]["subtitle"] != ""
+def is_episode_page(show_meta):
+    return (
+        show_meta is not None and
+        show_meta["display_title"]["subtitle"] != ""
+    )
 
 
-def is_programme_page(url):
-    try:
-        meta = get_show_metadata(url)
-    except JSONDecodeError:
-        return False
-    return meta["display_title"]["subtitle"] == "" and not url.endswith("/episodes/player")
+def is_programme_page(show_meta, source_url):
+    return (
+        show_meta is not None and
+        show_meta["display_title"]["subtitle"] == "" and
+        not source_url.endswith("/episodes/player")
+    )
 
 
 def is_playlist_page(url: str):

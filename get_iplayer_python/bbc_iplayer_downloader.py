@@ -1,193 +1,142 @@
+"""bbc iplayer downloader
+
+Download a episode or playlist of episodes to a location of your choice.
+
+"""
+
 import logging
 import os
-import string
 from datetime import datetime
 from pathlib import Path
 
-from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
-from get_iplayer_python.bbc_link_extractor import prepare_links
-from get_iplayer_python.bbc_metadata_generator import get_show_playlist_data, get_show_metadata
-from get_iplayer_python.downloader.downloader import download
+from get_iplayer_python.downloader.downloader import dash_downloader
+from get_iplayer_python.extractors.download_data_extractor import download_data_extractor
+from get_iplayer_python.extractors.template_extractors import get_best_download_templates
 from get_iplayer_python.ffmpeg_wrapper import merge_audio_and_video, save_audio
-from get_iplayer_python.mpd_data_extractor import get_stream_selection_links, create_templates
-from get_iplayer_python.url_validator import is_bbc_url
+from get_iplayer_python.helpers.filenames import get_final_filename, get_download_item_filename
+from get_iplayer_python.models.Exceptions import BbcException
 
 
-def download_from_url(url, location, overwrite=False, audio_only=False, download_hooks=None, after_date=datetime.min):
-    def update_download_hook(hooks, info_dict: dict):
-        for hook in hooks:
-            hook(info_dict)
+def download_from_url(url,
+                      location,
+                      overwrite=False,
+                      audio_only=False,
+                      download_hooks=None,
+                      after_date=datetime(1970, 1, 1),
+                      output_format=None,
+                      logger=logging.getLogger(__name__)):
+    """
+    The entry function to the program.
 
-    def download_show(show_location, playlist_info):
-        # helpers
-        def two_keys(a, b):
-            def _k(item):
-                return item[a], item[b]
+    Pass in a bbc url and location and this function will do the rest...
 
-            return _k
+    :param url: a BBC URL to the program or radio show to download
+    :param location: the location to download to
+    :param overwrite: boolean if true previous episode files are overwritten
+    :param audio_only: should only the audio be kept from download
+    :param download_hooks: like youtube_dl, hooks links into the progress of a download
+    :param after_date: only download programs who's fist broadcast date is after this date
+    :param output_format: what file format should the final file be in
+    :param logger: logger obj
+    :return:
+    """
 
-        def int_key(a):
-            def _k(item):
-                return int(item[a])
+    download_hooks = [] if download_hooks is None else download_hooks
 
-            return _k
+    def update_hooks(message):
+        for hook in download_hooks:
+            hook(message)
 
-        def get_best_templates_for_mimetypes(href):
-            templates = create_templates(href)
-
-            all_formats = []
-            for format_template in templates:
-                if not any([f for f in all_formats if f["mimetype"] == format_template["mimetype"]]):
-                    all_formats.append({"mimetype": format_template["mimetype"], "templates": []})
-                for mime_types in all_formats:
-                    if mime_types["mimetype"] == format_template["mimetype"]:
-                        mime_types["templates"].append(format_template)
-
-            best_formats = {}
-            for sort_format in all_formats:
-                best_format = sorted(sort_format["templates"], key=int_key("bandwidth"), reverse=True)[0]
-                media_type = best_format["mimetype"].split("/")[0]
-                best_formats[media_type] = {
-                    "template": best_format,
-                    "media_type": media_type,
-                    "extension": "m4a" if media_type == "audio" else best_format["mimetype"].split("/")[1]
-                }
-
-            return best_formats
-
-        def download_template(data_template):
-            logger.info("downloading %s" % data_template["download_filename"])
-            download(data_template["location"],
-                     data_template["download_filename"],
-                     data_template["extension"],
-                     data_template["template"],
-                     overwrite=overwrite)
-            logger.info("downloaded %s" % data_template["download_filename"])
-
-        def get_file_name(file):
-            return "%s%s.%s" % (
-                file["location"], file["download_filename"], file["extension"])
-
-        def get_output_filename(file, output_title, pid, extension=None):
-            valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
-            output_title = ''.join(c if c in valid_chars else '_' for c in output_title)
-            output_title = f"{output_title}-{pid}"
-            ext = extension if extension is not None else file["extension"]
-            return "%s%s.%s" % (
-                file["location"], output_title, ext)
-
-        def merge_video_and_audio_files(audio_file, video_file, pid, output_title):
-            audio_file_location = get_file_name(audio_file)
-            video_file_location = get_file_name(video_file)
-            output_title_location = get_output_filename(video_file, output_title, pid)
-            merge_audio_and_video(audio_file_location, video_file_location, output_title_location)
-
-        def save_audio_files(audio_file, pid, output_title):
-            audio_file_location = get_file_name(audio_file)
-            output_title_location = get_output_filename(audio_file, output_title, pid, "m4a")
-            save_audio(audio_file_location, output_title_location)
-
-        def cleanup(downloaded_formats):
-            for _, value in downloaded_formats.items():
-                downloaded_path = get_file_name(value)
-                if Path(downloaded_path).exists():
-                    os.remove(downloaded_path)
-
-        # stream setup
-        stream_selection_xml = get_stream_selection_xml(playlist_info["vpid"])
-        stream_selection_links = get_stream_selection_links(stream_selection_xml.content)
-
-        # template generation
-        # get highest priority mpeg dash link with highest bit rate
-        top_mpeg_dash = sorted(stream_selection_links, key=two_keys("priority", "bitrate"), reverse=True)[0]
-        # get highest bandwidth download template
-        formats = get_best_templates_for_mimetypes(top_mpeg_dash["href"])
-
-        if audio_only:
-            formats = {"audio": formats["audio"]}
-
-        if not any(formats):
-            logger.error("not available formats to download")
-            return
-
-        media_type_keys = list(formats.keys())
-
-        formats[media_type_keys[0]]["location"] = show_location
-        final_file_name = get_output_filename(
-            formats[media_type_keys[0]],
-            playlist_info["title"],
-            playlist_info["vpid"]
-        )
-        path_filename = Path(final_file_name)
-        if path_filename.is_file() and not overwrite:
-            logging.warning(f"{final_file_name} already exists skipping...")
-            return
-
-        for media_type_value, template in formats.items():
-            template["location"] = show_location
-            template["download_filename"] = "%s-%s" % (playlist_info["title"], media_type_value)
-            download_template(template)
-
-        if "audio" in media_type_keys and "video" in media_type_keys:
-            merge_video_and_audio_files(
-                formats["audio"],
-                formats["video"],
-                playlist_info["vpid"],
-                playlist_info["title"]
-            )
-
-        if len(media_type_keys) == 1 and "audio" in media_type_keys:
-            save_audio_files(
-                formats["audio"],
-                playlist_info["vpid"],
-                playlist_info["title"]
-            )
-
-        cleanup(formats)
-
-        return get_output_filename(formats[media_type_keys[0]], playlist_info["title"], playlist_info["vpid"])
-
-    if not is_bbc_url(url):
-        logging.error(f"not a bbc url: {url}")
+    try:
+        download_data = download_data_extractor(url, location, audio_only, download_hooks, after_date)
+    except BbcException as e:
+        logger.exception(e)
         return
 
-    if not location.endswith("/"):
-        location += "/"
+    for episode in download_data["episode_data"]:
+        try:
+            # tell download hooks that an episode is currently being downloaded
+            update_hooks({
+                "status": "downloading"
+            })
 
+            # get the best available MPD xml
+            episode_vpid = episode["playlist_metadata"]["vpid"]
+            best_template = get_best_download_templates(episode_vpid, audio_only)
+
+            # create final filename that both parts will be merged into
+            final_filename_args = {
+                "title": episode["show_metadata"]["display_title"]["title"],
+                "subtitle": episode["show_metadata"]["display_title"]["subtitle"],
+                "pid": episode["show_metadata"]["pid"],
+                "extension": output_format if output_format is not None else "m4a" if audio_only else "mp4"
+            }
+
+            episode["final_filename"] = get_final_filename(**final_filename_args)
+            episode["final_filename_with_path"] = f"{download_data['location']}{episode['final_filename']}"
+
+            # skip if the file already exists
+            if Path(episode["final_filename_with_path"]).is_file() and not overwrite:
+                logging.warning(f"{episode['final_filename_with_path']} already exists skipping...")
+                return
+
+            # what to remove once download is done (e.g. when downloading a show there will be pre merge audio / video)
+            episode["files_to_cleanup"] = []
+
+            # although unlikely for BBC there could be multiple MPD Periods
+            for period in best_template:
+                # download each file type for that period
+                for filetype, template in period.items():
+                    filename = get_download_item_filename(
+                        final_filename_args["title"],
+                        final_filename_args["subtitle"],
+                        filetype
+                    )
+                    full_path_filename = f"{download_data['location']}{filename}"
+                    template["filename_with_path"] = full_path_filename
+
+                    rep = template["representation"]
+                    # download the template (this is the """ real """ download
+                    dash_downloader(
+                        filename_with_path=full_path_filename,
+                        base_dash_path=rep["base_dash_path"],
+                        initialisation_template_url=rep["initialisation_template_url"],
+                        download_segments=rep["download_segments"],
+                        overwrite=overwrite,
+                        logger=logger
+                    )
+
+                    # append that file to be cleaned up as it is ffmpeged on the way out
+                    episode["files_to_cleanup"].append(full_path_filename)
+
+                # ffmpeg as audio or video
+                if audio_only or (len(period.items()) == 1 and "audio" in period):
+                    save_audio(period["audio"]["filename_with_path"], episode["final_filename_with_path"])
+                else:
+                    merge_audio_and_video(
+                        period["audio"]["filename_with_path"],
+                        period["video"]["filename_with_path"],
+                        episode["final_filename_with_path"]
+                    )
+
+                # tell hooks download is complete
+                update_hooks({
+                    "status": "finished",
+                    "filename": episode["final_filename_with_path"]
+                })
+
+            # remove laying around files
+            for file in episode["files_to_cleanup"]:
+                os.remove(file)
+
+            logger.info(f"download of {url} to {location} complete!")
+        except BbcException as e:
+            logger.exception(e)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s][%(levelname)s]: %(message)s")
+    logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
     logger = logging.getLogger(__name__)
-
-    if download_hooks is None:
-        download_hooks = []
-
-    update_download_hook(download_hooks, {
-        "status": "downloading"
-    })
-
-    logger.debug(f"retrieving links for {url}")
-
-    episode_url, links = prepare_links(url, after_date)
-
-    programme_metadata = get_show_metadata(url)
-
-    title = programme_metadata["title"]
-
-    logger.debug("found episodes...")
-
-    links_playlist_info = {}
-    for link in links:
-        links_playlist_info[link] = get_show_playlist_data(link)
-        logger.debug(links_playlist_info[link]["title"])
-
-    logging.info(f"downloading {'episode' if episode_url else 'playlist'}")
-
-    logger.info(f"staring download of  {title} to {location}")
-    for link in links:
-        update_download_hook(download_hooks, {
-            "status": "downloading"
-        })
-        file_name = download_show(location, links_playlist_info[link])
-        update_download_hook(download_hooks, {
-            "status": "finished",
-            "filename": file_name
-        })
-    logger.info(f"download of playlist {title} to {location} complete")
+    download_from_url("https://www.bbc.co.uk/iplayer/episode/b0074dpv/doctor-who-series-1-5-world-war-three", "./", logger=logger,
+                      download_hooks=[lambda d: logger.info(d)], output_format="mkv")
