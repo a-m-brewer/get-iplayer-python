@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 import pytz
 from simplejson.errors import JSONDecodeError
 
-from get_iplayer_python.bbc_link_extractor import extract_bbc_links
 from get_iplayer_python.bbc_metadata_generator import get_show_metadata, get_show_playlist_data
+from get_iplayer_python.extractors.bbc_link_extractor import extract_bbc_links
 from get_iplayer_python.models.Exceptions import ArgumentException, UserInputException
 from get_iplayer_python.models.SourceUrlType import SourceUrlType
 from get_iplayer_python.url_validator import is_bbc_url

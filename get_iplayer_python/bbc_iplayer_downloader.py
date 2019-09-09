@@ -1,3 +1,9 @@
+"""bbc iplayer downloader
+
+Download a episode or playlist of episodes to a location of your choice.
+
+"""
+
 import logging
 import os
 from datetime import datetime
@@ -19,6 +25,21 @@ def download_from_url(url,
                       after_date=datetime(1970, 1, 1),
                       output_format=None,
                       logger=logging.getLogger(__name__)):
+    """
+    The entry function to the program.
+
+    Pass in a bbc url and location and this function will do the rest...
+
+    :param url: a BBC URL to the program or radio show to download
+    :param location: the location to download to
+    :param overwrite: boolean if true previous episode files are overwritten
+    :param audio_only: should only the audio be kept from download
+    :param download_hooks: like youtube_dl, hooks links into the progress of a download
+    :param after_date: only download programs who's fist broadcast date is after this date
+    :param output_format: what file format should the final file be in
+    :param logger: logger obj
+    :return:
+    """
 
     download_hooks = [] if download_hooks is None else download_hooks
 

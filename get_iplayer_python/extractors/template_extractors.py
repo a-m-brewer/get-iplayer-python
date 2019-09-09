@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from get_iplayer_python.bbc_dash_xml_extractor import get_stream_selection_xml
+from get_iplayer_python.extractors.bbc_dash_xml_extractor import get_stream_selection_xml
 from get_iplayer_python.extractors.download_data_extractor import download_data_extractor
 from get_iplayer_python.extractors.stream_template_extractor import get_stream_selection_links, create_templates
 from get_iplayer_python.helpers.sorted_extentions import sort_by_two_keys
