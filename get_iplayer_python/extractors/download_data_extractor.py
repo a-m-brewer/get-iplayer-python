@@ -113,7 +113,7 @@ def get_url_metadata(source_url):
 
 
 if __name__ == '__main__':
-    download_data_extractor("https://www.bbc.co.uk/programmes/b01dmw90/episodes/player", "./", True, [],
+    data = download_data_extractor("https://www.bbc.co.uk/programmes/b01dmw90/episodes/player", "./", True, [],
                             datetime(1970, 1, 1))
     download_data_extractor("https://www.bbc.co.uk/programmes/b01dmw90", "./", True, [], datetime(1970, 1, 1))
     download_data_extractor("https://www.bbc.co.uk/programmes/m00082n0", "./", True, [], datetime(1970, 1, 1))
