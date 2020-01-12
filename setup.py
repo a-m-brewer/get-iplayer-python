@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='get_iplayer_python',
-    version='1.1.6',
+    version='1.2.0',
     author='Adam Brewer',
     author_email='adam@adambrewer.co.uk',
     url="https://github.com/a-m-brewer/get-iplayer-python",
