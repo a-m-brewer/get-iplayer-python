@@ -69,7 +69,7 @@ def download_from_url(url,
                 "title": episode["show_metadata"]["display_title"]["title"],
                 "subtitle": episode["show_metadata"]["display_title"]["subtitle"],
                 "pid": episode["show_metadata"]["pid"],
-                "extension": output_format if output_format is not None else "m4a" if audio_only else "mp4"
+                "extension": output_format if output_format is not None else "m4a" if audio_only else "mkv"
             }
 
             episode["final_filename"] = get_final_filename(**final_filename_args)
