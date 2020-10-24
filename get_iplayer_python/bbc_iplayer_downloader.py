@@ -51,7 +51,9 @@ def download_from_url(url,
         download_data = download_data_extractor(url, location, audio_only, download_hooks, after_date)
     except BbcException as e:
         logger.exception(e)
-        return
+        return False
+
+    success = []
 
     for episode in download_data["episode_data"]:
         try:
@@ -78,7 +80,7 @@ def download_from_url(url,
             # skip if the file already exists
             if Path(episode["final_filename_with_path"]).is_file() and not overwrite:
                 logging.warning(f"{episode['final_filename_with_path']} already exists skipping...")
-                return
+                continue
 
             # what to remove once download is done (e.g. when downloading a show there will be pre merge audio / video)
             episode["files_to_cleanup"] = []
@@ -111,13 +113,17 @@ def download_from_url(url,
 
                 # ffmpeg as audio or video
                 if audio_only or (len(period.items()) == 1 and "audio" in period):
-                    save_audio(period["audio"]["filename_with_path"], episode["final_filename_with_path"])
+                    episode_success = save_audio(period["audio"]["filename_with_path"], episode["final_filename_with_path"])
                 else:
-                    merge_audio_and_video(
+                    episode_success = merge_audio_and_video(
                         period["audio"]["filename_with_path"],
                         period["video"]["filename_with_path"],
                         episode["final_filename_with_path"]
                     )
+
+                if not episode_success:
+                    success.append(episode_success)
+                    continue
 
                 # tell hooks download is complete
                 update_hooks({
@@ -129,9 +135,15 @@ def download_from_url(url,
             for file in episode["files_to_cleanup"]:
                 os.remove(file)
 
+            episode_success = True
             logger.info(f"download of {url} to {location} complete!")
         except BbcException as e:
+            episode_success = False
             logger.exception(e)
+
+        success.append(episode_success)
+
+    return all(success)
 
 
 if __name__ == '__main__':

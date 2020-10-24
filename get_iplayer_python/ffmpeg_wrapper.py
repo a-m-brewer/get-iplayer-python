@@ -13,7 +13,10 @@ def merge_audio_and_video(audio_file_location, video_file_location, output_file_
              output_file_name])
     except OSError as e:
         logger.exception(e.strerror)
+        return False
+
     logger.debug(f"merged audio: {audio_file_location} video: {video_file_location} to {output_file_name}")
+    return True
 
 
 def save_audio(audio_file_location, output_file_name):
@@ -26,4 +29,7 @@ def save_audio(audio_file_location, output_file_name):
              output_file_name])
     except OSError as e:
         logger.exception(e.strerror)
+        return False
+
     logger.debug(f"saved audio: {audio_file_location} to {output_file_name}")
+    return True

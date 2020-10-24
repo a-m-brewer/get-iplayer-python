@@ -23,3 +23,7 @@ def extract_bbc_links(url: str, html_retriever_function=requests_website_retriev
         links.extend([a.attrs["href"] for a in result.find_all('a', href=True) if is_programmes_url(a.attrs["href"])])
 
     return links
+
+
+if __name__ == '__main__':
+    links = extract_bbc_links('https://www.bbc.co.uk/programmes/b01dmw90/episodes/player')
